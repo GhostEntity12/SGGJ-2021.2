@@ -12,5 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7d2dd5a14a49ebf40947dd20e8b02054, type: 3}
   m_Name: TestDialogue
   m_EditorClassIdentifier: 
-  dialogue: "aknfloagrng'ooar\r\nasdjgparwrgmparemgp;akre\r\nasva;wksvm :KA bv\r\nzsvmaz;kv
-    ba\r\nare[goa\r\naerg,alo[bm[aeomrb'ajr'aov \r\nargjarg"
+  dialogue: 'Spaceman (tired): This is a table?'
