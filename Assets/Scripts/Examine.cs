@@ -7,6 +7,7 @@ public class Examine : Interactable
 
 	private void Reset()
 	{
+		base.Reset();
 		blocksInput = true;
 	}
 
