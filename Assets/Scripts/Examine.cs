@@ -1,18 +1,24 @@
-using System.Collections;
-using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
-public class Examine : MonoBehaviour
+public class Examine : Interactable
 {
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
+	public Dialogue examineScene;
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
+	private void Reset()
+	{
+		blocksInput = true;
+	}
+
+	private void Awake()
+	{
+		DialogueManager.OnEndDialogueEvent += () => PlayerController.player.canInput = true;
+	}
+
+	public override void Interact()
+	{
+		if (blocksInput) PlayerController.player.canInput = false;
+		FindObjectOfType<DialogueManager>().TriggerScene(examineScene);
+	}
+
 }

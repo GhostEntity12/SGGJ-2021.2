@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 080b1ad15941c744994d9eacbb106f50, type: 3}
   m_Name: Spaceman
   m_EditorClassIdentifier: 
-  neutral: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
-  angry: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+  neutral: {fileID: 21300000, guid: 94a31f9c51dd48e41b007a63dfd48880, type: 3}
+  angry: {fileID: 21300000, guid: 4da7472faec90a7468978c69cb2f7921, type: 3}
   happy: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
-  tired: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+  tired: {fileID: 21300000, guid: 4d88024d45edb4d4b80271b17ac2d4fb, type: 3}

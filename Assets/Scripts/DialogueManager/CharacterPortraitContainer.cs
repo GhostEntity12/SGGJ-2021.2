@@ -1,9 +1,7 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 [CreateAssetMenu]
 public class CharacterPortraitContainer : ScriptableObject
 {
-    public Sprite neutral, angry, happy, tired;
+	public Sprite neutral, angry, happy, tired;
 }

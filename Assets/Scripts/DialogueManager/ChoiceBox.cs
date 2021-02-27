@@ -18,8 +18,7 @@ public class ChoiceBox : MonoBehaviour
         dm.choiceBoxActive = false;
         canvasGroup.alpha = 0;
         canvasGroup.interactable = canvasGroup.blocksRaycasts = (canvasGroup.alpha == 1);
-        dm.LoadSceneTextFile(c.scene);
-        dm.LoadNewLine();
+        dm.TriggerScene(c.scene);
         ResetButtons();
     }
 

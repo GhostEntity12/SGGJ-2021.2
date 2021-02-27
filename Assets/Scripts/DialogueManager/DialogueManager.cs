@@ -1,27 +1,23 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using TMPro;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class DialogueManager : MonoBehaviour
 {
-    bool showingDialogue;
-    bool isFading;
-    bool isDisplayingText;
-    [HideInInspector]
+    bool dialogueActive;
+    [NonSerialized]
     public bool choiceBoxActive;
-    IEnumerator displayDialogueCoroutine;
+    Coroutine dialogueDisplayCoroutine;
+
+    public KeyCode[] ProgressionKeys = new KeyCode[1] { KeyCode.Return };
 
     [Header("UI")]
-    CanvasGroup canvasGroup;
-    [Tooltip("How quickly the UI fades in")]
-    public float uiFadeInSpeed = 0.4f;
-    [Space(15)]
     [Tooltip("The object which holds characters' names")]
     public TextMeshProUGUI nameBox;
     [Tooltip("The object which holds characters' dialogue")]
@@ -30,6 +26,10 @@ public class DialogueManager : MonoBehaviour
     public Image bust;
     [Tooltip("The Box which manages player choices")]
     public ChoiceBox choiceBox;
+    [Space(15)]
+    [Tooltip("How quickly the UI fades in")]
+    public float uiFadeSpeed = 0.4f;
+    CanvasGroup canvasGroup;
 
     [Header("Text Display Options")]
     [Tooltip("The length of time to wait between displaying characters")]
@@ -37,327 +37,231 @@ public class DialogueManager : MonoBehaviour
 
     [Header("File")]
     [Tooltip("The scene to load")]
-    public string sceneName;
-    [Tooltip("Whether to clear the scene after it has run")]
-    public bool clearAfterScene;
+    public Dialogue sceneFile;
 
     [Header("Characters")]
-    [Tooltip("The array that contains all of the characters")]
-    public CharacterPortraitContainer[] characters;
+    public Sprite defaultCharacterSprite;
     readonly Dictionary<string, CharacterPortraitContainer> characterDictionary = new Dictionary<string, CharacterPortraitContainer>();
 
-    public Sprite defaultCharacterSprite;
 
     string[] fileLines;
-    int currentLine;
+    int currentLineIndex;
     string characterName, characterDialogue, characterExpression;
 
     public VariableDump variableDump;
 
+    public delegate void OnEndDialogue();
+    public static event OnEndDialogue OnEndDialogueEvent;
+
     private void Awake()
     {
         canvasGroup = GetComponent<CanvasGroup>(); // Gets the canvas group to deal with fading opacity
-        foreach (var characterPortraits in characters) // Creates the dictionary
+        foreach (CharacterPortraitContainer characterPortraits in Resources.LoadAll<CharacterPortraitContainer>("CharacterDialogueSprites")) // Creates the dictionary
         {
             characterDictionary.Add(characterPortraits.name, characterPortraits);
         }
         ClearDialogueBox(); // Clears the dialogue box, just in case
     }
 
-    /// <summary>
-    /// Clears the dialogue box's name, dialogue and image
-    /// </summary>
-    void ClearDialogueBox()
+    private void Update()
     {
-        bust.sprite = null;
-        nameBox.text = string.Empty;
-        dialogueBox.text = string.Empty;
+        if (GetAnyKeyDown(ProgressionKeys) && dialogueActive) // If enter is pressed and the textboxes are visible
+        {
+            if (dialogueDisplayCoroutine != null) // If the system is currently typing out, finish and return
+            {
+                StopCoroutine(dialogueDisplayCoroutine); // Stops the typing out
+                dialogueBox.text = characterDialogue; // Fills the textbox with the entirety of the character's line
+                dialogueDisplayCoroutine = null;
+                return;
+            }
+            else if (currentLineIndex >= fileLines.Length) // If there are no more lines
+            {
+                EndScene();
+            }
+            else
+            {
+                LoadNewLine(); // Loads the next line
+            }
+        }
     }
 
-    /// <summary>
-    /// Loads the given scene into an array of the scene's lines
-    /// </summary>
-    /// <param name="_sceneName">The name of the scene. Determines the file to grab. Scene dialogues should be named after the scene they take place in</param>
-    public void LoadSceneTextFile(string _sceneName)
+    public void TriggerScene(Dialogue scene)
     {
-        sceneName = _sceneName;
-        var file = Resources.Load<TextAsset>($"Dialogue/{sceneName}");
+        sceneFile = scene;
 
-        if (file == null)
+        // Throws error no matching file exists
+        if (sceneFile == null)
         {
-            Debug.LogError($"File \"{sceneName}\" not found!");
+            Debug.LogError($"Dialogue file \"{sceneFile}\" not found!");
+            return;
         }
 
+        Debug.Log($"<color=#5cd3e0>[Dialogue]</color> Starting dialogue {sceneFile.name}");
+        ClearDialogueBox();
+        StartCoroutine(FadeCanvas(uiFadeSpeed, 0, 1));
+
         // Splits the input on its new lines
-        fileLines = file.text.Split(
+        fileLines = sceneFile.dialogue.Split(
             new[] { "\r\n", "\r", "\n", Environment.NewLine },
             StringSplitOptions.None
             );
+        currentLineIndex = 0;
+        LoadNewLine();
+    }
 
-        currentLine = 0;
-        ClearDialogueBox();
+    void EndScene()
+    {
+        OnEndDialogueEvent.Invoke();
+        StartCoroutine(FadeCanvas(uiFadeSpeed, 1, 0));
     }
 
     /// <summary>
     /// Loads the next line from fileLines
     /// </summary>
-    public void LoadNewLine()
+    void LoadNewLine()
     {
-        LoadNewLine:
-        // Split the line into its components and store them
-        string[] parsedText = fileLines[currentLine].Split('|');
-        currentLine++;
+        string line = fileLines[currentLineIndex];
 
-        switch (parsedText[0].ToLower())
+        if (line[0] == '{')
+        // Line represents setting/modifying a variable
+        // Example line: { money add 10 }
         {
-            case "[choice]":    // Line represents a choice
-                DisplayChoices(parsedText);
+            ModifyVariable(line.Substring(1, line.Length - 2).Trim());
+            currentLineIndex++;
+
+            if (currentLineIndex >= fileLines.Length) return;
+            line = fileLines[currentLineIndex];
+        }
+        else if (line[0] == '[')
+        // Line(s) represents a choice
+        // Example lines:
+        // [
+        //     Polite Greeting  : DIA_Scene1_PoliteGreeting
+        //     Rude Greeting    : DIA_Scene1_RudeGreeting
+        // ]
+        {
+
+            currentLineIndex++;
+            List<string> optionsLines = new List<string>();
+            while (fileLines[currentLineIndex][0] != ']')
+            {
+                optionsLines.Add(fileLines[currentLineIndex].Trim());
+            }
+            DisplayChoices(optionsLines);
+            currentLineIndex++;
+
+            // Update line to reflect new value or return if end of file
+            if (currentLineIndex >= fileLines.Length) return;
+            line = fileLines[currentLineIndex];
+        }
+
+        DisplayDialogue(line);
+        currentLineIndex++;
+    }
+
+    void DisplayDialogue(string line)
+    {
+        // Clears the dialogue box
+        dialogueBox.text = string.Empty;
+
+        // Split the line into character info and dialogue
+        string[] parsedText = line.Split(':');
+        switch (parsedText[0].IndexOf('('))
+        {
+            case -1: // No expression defined
+                characterName = parsedText[0].Trim();
+                characterExpression = "neutral";
                 break;
-            case "[var]":       // Line represents setting a variable
-                switch (parsedText[2].ToLower())
-                {
-                    case string s when s == "[set]" || s == "=":
-                        SetVariable(parsedText[1], parsedText[3]);
-                        break;
-                    case string s when s == "[add]" || s == "+":
-                        AddVariable(parsedText[1], parsedText[3]);
-                        break;
-                    case string s when s == "[subtract]" || s == "[sub]" || s == "-":
-                        SubtractVariable(parsedText[1], parsedText[3]);
-                        break;
-                    case string s when s == "[append]" || s == "[app]" || s == "~":
-                        AppendVariable(parsedText[1], parsedText[3]);
-                        break;
-                    default:
-                        Debug.LogError($"Unknown variable operator \"{parsedText[2]}\".\nUse [Set]/=, [Add]/+, [Subtract]/[Sub]/- or [Append]/[App]/~.");
-                        break;
-                }
-                if (currentLine == fileLines.Count())
-                {
-                    if (clearAfterScene) // Clears the scene if told to
-                    {
-                        sceneName = string.Empty;
-                    }
-                    StartCoroutine(FadeCanvas(uiFadeInSpeed, canvasGroup.alpha, 0)); // Fades out the UI
-                    break;
-                }
+            default:
+                characterName = parsedText[0].Substring(0, parsedText[0].IndexOf('(')).Trim();
+                characterExpression = parsedText[0].Substring(parsedText[0].IndexOf('(') + 1, parsedText[0].IndexOf(')') - parsedText[0].IndexOf('(') - 1).ToLower();
+                break;
+        }
+
+        characterDialogue = parsedText[1];
+
+        // Looks for substrings surrounded by braces and replaces them with 
+        // variables of the same name, looked up in the variable dump
+        MatchCollection variables = Regex.Matches(characterDialogue, @"{\S*}");
+        foreach (Match variable in variables)
+        {
+            string variableName = variable.ToString().Trim(new[] { '{', '}' });
+            FieldInfo field = variableDump.GetType().GetField(variableName);
+
+            if (field != null)
+            {
+                string value = field.GetValue(variableDump).ToString();
+                if (string.IsNullOrEmpty(value))
+                    Debug.LogWarning($"Field \"{variableName}\" has no value");
                 else
-                    // Here to prevent overflow from recursion.
-                    goto LoadNewLine;
-            default:            // Line represents dialogue
-                characterName = parsedText[0];
-                characterExpression = parsedText[1].ToLower();
-                characterDialogue = parsedText[2];
+                    characterDialogue = characterDialogue.Replace(variable.ToString(), value);
+            }
+            else
+            {
+                Debug.LogError($"Field \"{variableName}\" not found");
+            }
+        }
 
-                // Looks for substrings surrounded by braces and replaces them with 
-                // variables of the same name, looked up in the variable dump
-                MatchCollection variables = Regex.Matches(characterDialogue, @"{\S*}");
-                foreach (Match variable in variables)
-                {
-                    string variableName = variable.ToString().Trim(new[] { '{', '}' });
-                    FieldInfo field = variableDump.GetType().GetField(variableName);
-                    if (field != null)
-                    {
-                        string value = field.GetValue(variableDump).ToString();
-                        if (string.IsNullOrEmpty(value))
-                        {
-                            Debug.LogWarning($"Field \"{variableName}\" has no value");
-                        }
-                        else
-                        {
-                            characterDialogue = characterDialogue.Replace(variable.ToString(), value);
-                        }
-                    }
-                    else
-                    {
-                        Debug.LogError($"Field \"{variableName}\" not found");
-                    }
-                }
+        // Sets the name box
+        nameBox.text = characterName;
 
-                // Clears the dialogue box
-                dialogueBox.text = string.Empty;
+        // Converts the expression string into the associated Sprite variable in the given character
+        // Returns the unknown character sprite if no associated character is found
+        try
+        {
+            bust.sprite = (Sprite)characterDictionary[characterName].GetType().GetField(characterExpression).GetValue(characterDictionary[characterName]);
+        }
+        catch (KeyNotFoundException)
+        {
+            bust.sprite = defaultCharacterSprite;
+        }
 
-                // Sets the name box
-                nameBox.text = characterName;
+        // Start the coroutine/IEnumerator
+        dialogueDisplayCoroutine = StartCoroutine(PrintDialogue(characterDialogue));
 
-                // Converts the expression string into the associated Sprite variable in the given character
-                // Returns the unknown character sprite if no associated character is found
-                try
-                {
-                    bust.sprite = (Sprite)characterDictionary[characterName].GetType().GetField(characterExpression).GetValue(characterDictionary[characterName]);
-                }
-                catch (KeyNotFoundException)
-                {
-                    bust.sprite = defaultCharacterSprite;
-                }
+    }
 
-                // Declare and then start the coroutine/IEnumerator so it can be stopped later
-                displayDialogueCoroutine = DisplayDialogue(characterDialogue);
-                StartCoroutine(displayDialogueCoroutine);
+    void ModifyVariable(string command)
+    {
+        // Command structure:
+        // [0: variable] [1: command] [2: value]
+        string[] commandInfo = command.Split(' ');
+
+        switch (commandInfo[1].ToLower())
+        {
+            case string s when s == "[set]":
+                variableDump.SetVariable(commandInfo[0], commandInfo[2]);
+                break;
+            case string s when s == "[add]":
+                variableDump.AddVariable(commandInfo[0], commandInfo[2]);
+                break;
+            case string s when s == "[sub]" || s == "[subtract]":
+                variableDump.SubtractVariable(commandInfo[0], commandInfo[2]);
+                break;
+            case string s when s == "[app]" || s == "[append]":
+                variableDump.AppendVariable(commandInfo[0], commandInfo[2]);
+                break;
+            default:
+                Debug.LogError($"Unknown variable operator \"{commandInfo[1]}\".\nUse [Set], [Add], [Subtract]/[Sub] or [Append]/[App].");
                 break;
         }
     }
 
-    void DisplayChoices(string[] parsedText)
+    void DisplayChoices(List<string> options)
     {
         choiceBoxActive = true;
         choiceBox.canvasGroup.alpha = 1;
         choiceBox.canvasGroup.interactable = choiceBox.canvasGroup.blocksRaycasts = (choiceBox.canvasGroup.alpha == 1);
-        int choices = (parsedText.Count() - 1) / 2;
-        for (int i = 1; i <= choices; i++)
+        for (int i = 0; i < options.Count; i++)
         {
-            choiceBox.choices[i - 1].gameObject.SetActive(true);
-            choiceBox.choices[i - 1].text.text = parsedText[(2 * i) - 1];
-            choiceBox.choices[i - 1].scene = parsedText[2 * i];
-        }
-    }
-
-    /// <summary>
-    /// Sets a variable in the given VariableDump
-    /// </summary>
-    /// <param name="parsedText"></param>
-    void SetVariable(string variableName, string value)
-    {
-        FieldInfo field = variableDump.GetType().GetField(variableName);
-
-        if (field != null)
-        {
-            switch (field.FieldType)
-            {
-                case Type t when t == typeof(string):
-                    field.SetValue(variableDump, value);
-                    break;
-                case Type t when t == typeof(bool):
-                    field.SetValue(variableDump, value.Equals("true"));// ? true : false);
-                    break;
-                case Type t when t == typeof(int):
-                    if (int.TryParse(value, out int parsedInt))
-                    {
-                        field.SetValue(variableDump, parsedInt);
-                    }
-                    else
-                    {
-                        Debug.LogError($"Invalid Conversion: \"{value}\" could not be cast to int");
-                    }
-                    break;
-                case Type t when t == typeof(float):
-                    if (float.TryParse(value, out float parsedFloat))
-                    {
-                        field.SetValue(variableDump, parsedFloat);
-                    }
-                    else
-                    {
-                        Debug.LogError($"Invalid Conversion: \"{value}\" could not be cast to float");
-                    }
-                    break;
-                default:
-                    Debug.LogError($"Field type \"{field.FieldType}\" is not supported.");
-                    break;
-            }
-        }
-        else
-        {
-            Debug.LogError($"Field \"{variableName}\" not found");
-        }
-    }
-
-    void AddVariable(string variableName, string value)
-    {
-        FieldInfo field = variableDump.GetType().GetField(variableName);
-
-        if (field != null)
-        {
-            switch (field.FieldType)
-            {
-                case Type t when t == typeof(int):
-                    if (int.TryParse(value, out int parsedInt))
-                    {
-                        field.SetValue(variableDump, (int)field.GetValue(variableDump) + parsedInt);
-                    }
-                    else
-                    {
-                        Debug.LogError($"Invalid Conversion: \"{value}\" could not be cast to int");
-                    }
-                    break;
-                case Type t when t == typeof(float):
-                    if (float.TryParse(value, out float parsedFloat))
-                    {
-                        field.SetValue(variableDump, (float)field.GetValue(variableDump) + parsedFloat);
-                    }
-                    else
-                    {
-                        Debug.LogError($"Invalid Conversion: \"{value}\" could not be cast to float");
-                    }
-                    break;
-                default:
-                    Debug.LogError($"[Add] only supports ints and floats! Field type \"{field.FieldType}\" is not supported.");
-                    break;
-            }
-        }
-        else
-        {
-            Debug.LogError($"Field \"{variableName}\" not found");
-        }
-    }
-
-    void SubtractVariable(string variableName, string value)
-    {
-        FieldInfo field = variableDump.GetType().GetField(variableName);
-
-        if (field != null)
-        {
-            switch (field.FieldType)
-            {
-                case Type t when t == typeof(int):
-                    if (int.TryParse(value, out int parsedInt))
-                    {
-                        field.SetValue(variableDump, (int)field.GetValue(variableDump) - parsedInt);
-                    }
-                    else
-                    {
-                        Debug.LogError($"Invalid Conversion: \"{value}\" could not be cast to int");
-                    }
-                    break;
-                case Type t when t == typeof(float):
-                    if (float.TryParse(value, out float parsedFloat))
-                    {
-                        field.SetValue(variableDump, (float)field.GetValue(variableDump) - parsedFloat);
-                    }
-                    else
-                    {
-                        Debug.LogError($"Invalid Conversion: \"{value}\" could not be cast to float");
-                    }
-                    break;
-                default:
-                    Debug.LogError($"[Add] only supports ints and floats! Field type \"{field.FieldType}\" is not supported.");
-                    break;
-            }
-        }
-        else
-        {
-            Debug.LogError($"Field \"{variableName}\" not found");
-        }
-    }
-
-    void AppendVariable(string variableName, string value)
-    {
-        FieldInfo field = variableDump.GetType().GetField(variableName);
-
-        if (field != null)
-        {
-            if (field.FieldType == typeof(string))
-            {
-                field.SetValue(variableDump, field.GetValue(variableDump) + value);
-            }
+            string[] optionInfo = options[i].Split(':');
+            choiceBox.choices[i].gameObject.SetActive(true);
+            choiceBox.choices[i].text.text = optionInfo[0].Trim();
+            Dialogue scene = Resources.Load($"Dialogue/{options[1].Trim()}") as Dialogue;
+            if (scene)
+                choiceBox.choices[i].scene = scene;
             else
-            {
-                Debug.LogError($"[Append] only supports strings! Field type \"{field.FieldType}\" is not supported.");
-            }
-
-        }
-        else
-        {
-            Debug.LogError($"Field \"{variableName}\" not found");
+                Debug.LogError($"Dialogue file \"{sceneFile}\" not found!");
         }
     }
 
@@ -366,10 +270,8 @@ public class DialogueManager : MonoBehaviour
     /// </summary>
     /// <param name="text">The text to display</param>
     /// <returns></returns>
-    IEnumerator DisplayDialogue(string text)
+    IEnumerator PrintDialogue(string text)
     {
-        isDisplayingText = true; // Marks the system as typing out letters. Used to determine what happens when pressing enter
-
         for (int i = 0; i < text.Length; i++) // Adds a letter to the textbox then waits the delay time
         {
             if (text[i] == '<') // If the letter is an opening tag character, autofill the rest of the tag
@@ -389,45 +291,7 @@ public class DialogueManager : MonoBehaviour
             dialogueBox.text += text[i];
             yield return new WaitForSeconds(delay);
         }
-
-        isDisplayingText = false; // Marks the system as no longer typing out
-    }
-
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Return))
-        {
-            // Eats input if no matching file exists or if the UI is fading in/out or if the player is making a choice
-            if (Resources.Load<TextAsset>($"Dialogue/{sceneName}") == null || isFading || choiceBoxActive)
-                return;
-
-            if (showingDialogue) // If dialogue boxes are visible
-            {
-                if (currentLine >= fileLines.Length && !isDisplayingText) // If there are no more lines and system is not typing out
-                {
-                    if (clearAfterScene) // Clears the scene if told to
-                    {
-                        sceneName = string.Empty;
-                    }
-                    StartCoroutine(FadeCanvas(uiFadeInSpeed, canvasGroup.alpha, 0)); // Fades out the UI
-                    return;
-                }
-                if (isDisplayingText) // If the system is typing out
-                {
-                    StopCoroutine(displayDialogueCoroutine); // Stops the typing out
-                    dialogueBox.text = characterDialogue; // Fills the textbox with the entirety of the character's line
-                    isDisplayingText = false; // Marks the system as no longer typing out
-                }
-                else // If the system is not typing out
-                {
-                    LoadNewLine(); // Loads the next line
-                }
-            }
-            else // If dialogue boxes are not visible
-            {
-                StartCoroutine(FadeCanvas(uiFadeInSpeed, canvasGroup.alpha, 1)); // Fades in the UI
-            }
-        }
+        dialogueDisplayCoroutine = null;
     }
 
     /// <summary>
@@ -439,17 +303,11 @@ public class DialogueManager : MonoBehaviour
     /// <returns></returns>
     IEnumerator FadeCanvas(float lerpTime, float start, float end)
     {
-        if (end == 1) // If fading in
-        {
-            LoadSceneTextFile(sceneName);
-        }
-
         // For keeping track of the fade
         float timeAtStart = Time.time;
         float timeSinceStart;
         float percentageComplete = 0;
 
-        isFading = true; // Marks the UI as fading
         while (percentageComplete < 1) // Keeps looping until the lerp is complete
         {
             timeSinceStart = Time.time - timeAtStart;
@@ -460,15 +318,52 @@ public class DialogueManager : MonoBehaviour
             canvasGroup.alpha = currentValue;
             yield return new WaitForEndOfFrame();
         }
-        isFading = false; // Marks the UI as no longer fading
 
-        showingDialogue = !showingDialogue; // Toggles the representation of whether the UI is visible
-
-        if (end == 1 && !isDisplayingText) // If fading in
-        {
-            LoadNewLine(); // Loads the next line
-        }
+        dialogueActive = !dialogueActive; // Toggles the representation of whether the UI is visible
 
         canvasGroup.interactable = canvasGroup.blocksRaycasts = (canvasGroup.alpha == 1);
     }
+
+    /// <summary>
+    /// Clears the dialogue box's name, dialogue and image
+    /// </summary>
+    void ClearDialogueBox()
+    {
+        bust.sprite = null;
+        nameBox.text = string.Empty;
+        dialogueBox.text = string.Empty;
+    }
+
+    bool GetAnyKeyDown(params KeyCode[] aKeys)
+    {
+        foreach (var key in aKeys)
+            if (Input.GetKeyDown(key))
+                return true;
+        return false;
+    }
+
+#if UNITY_EDITOR
+    [MenuItem("Dialogue/Convert Text Dialogue Files")]
+    static void ConvertTextFiles()
+    {
+        TextAsset[] dialogueFiles = Resources.LoadAll<TextAsset>("Dialogue");
+        foreach (TextAsset file in dialogueFiles)
+        {
+            Dialogue existingAsset = Resources.Load<Dialogue>($"Dialogue/{file.name}");
+            if (existingAsset)
+            {
+                existingAsset.dialogue = file.text;
+            }
+            else
+            {
+                Dialogue asset = ScriptableObject.CreateInstance<Dialogue>();
+
+                asset.dialogue = file.text;
+
+                AssetDatabase.CreateAsset(asset, $"Assets/Resources/Dialogue/{file.name}.asset");
+                AssetDatabase.SaveAssets();
+            }
+        }
+    }
+#endif
 }
