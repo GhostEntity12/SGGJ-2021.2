@@ -176,7 +176,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   blocksInput: 1
-  examineScene: {fileID: 11400000, guid: 5fedb0ca32850774c88f4049a5ef0922, type: 2}
+  examineScene: {fileID: 11400000, guid: b42ec879d7482eb4a846ad5f600ab774, type: 2}
 --- !u!65 &174776510
 BoxCollider:
   m_ObjectHideFlags: 0
