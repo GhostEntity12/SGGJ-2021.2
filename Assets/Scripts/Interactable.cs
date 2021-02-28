@@ -5,7 +5,7 @@ public abstract class Interactable : MonoBehaviour
 {
 	public bool blocksInput;
 
-	protected void Reset()
+	protected virtual void Reset()
 	{
 		gameObject.layer = 6;
 	}
