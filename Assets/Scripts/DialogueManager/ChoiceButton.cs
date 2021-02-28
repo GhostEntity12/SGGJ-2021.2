@@ -6,7 +6,7 @@ public class ChoiceButton : MonoBehaviour
 {
     public Button button;
     public TextMeshProUGUI text;
-    public string scene;
+    public Dialogue scene;
 
     ChoiceBox choiceBox;
 
