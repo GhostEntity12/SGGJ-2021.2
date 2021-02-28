@@ -13,7 +13,11 @@ GameObject:
   - component: {fileID: 1195757640345187726}
   - component: {fileID: 5032844392568703578}
   - component: {fileID: 427813632121365645}
-  m_Layer: 0
+  - component: {fileID: 5400591621940109186}
+  - component: {fileID: 3906386372958923508}
+  - component: {fileID: 8736221986665341784}
+  - component: {fileID: 8736221986665341791}
+  m_Layer: 6
   m_Name: Shelving
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -27,7 +31,7 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 578767830403225672}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 2.2033377, y: 0.82079506, z: 4.197626}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
@@ -313,3 +317,57 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 0}
+--- !u!65 &5400591621940109186
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 578767830403225672}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Size: {x: 2, y: 2, z: 0.7}
+  m_Center: {x: 1, y: 1, z: -0.35}
+--- !u!114 &3906386372958923508
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 578767830403225672}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e27ec80653c6f2f4db5fdbeaf005f5fb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  blocksInput: 1
+  examineScene: {fileID: 11400000, guid: 39ab95548da8edc47ba056c5fe2bcf8a, type: 2}
+--- !u!65 &8736221986665341784
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 578767830403225672}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Size: {x: 2, y: 2, z: 0.7}
+  m_Center: {x: 1, y: 1, z: -0.35}
+--- !u!114 &8736221986665341791
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 578767830403225672}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e27ec80653c6f2f4db5fdbeaf005f5fb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  blocksInput: 1
+  examineScene: {fileID: 11400000, guid: 39ab95548da8edc47ba056c5fe2bcf8a, type: 2}

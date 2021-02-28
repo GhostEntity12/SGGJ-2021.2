@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
@@ -10,22 +11,25 @@ public class PlayerController : MonoBehaviour
 	Vector2 movementVector;
 	float startScale;
 
-	Vector3 boxSize = new Vector3(0.5f, 0.25f, 0.5f);
+	Vector3 boxSize = new Vector3(0.75f, 0.25f, 0.5f);
 
 	Interactable activeInteractable;
 
 	public CanvasGroup fade;
+
+	Material m;
 
 	private void Awake()
 	{
 		r = GetComponent<Rigidbody>();
 		startScale = transform.localScale.y;
 		player = this;
+		m = GetComponent<Renderer>().sharedMaterial;
 	}
 
 	void Update()
 	{
-		var interactablesInRange = Physics.OverlapBox(transform.position + Vector3.down, boxSize, Quaternion.identity, 1 << 6, QueryTriggerInteraction.Collide);
+		var interactablesInRange = Physics.OverlapBox(transform.position, boxSize, Quaternion.identity, 1 << 6, QueryTriggerInteraction.Collide);
 		activeInteractable = interactablesInRange.Length switch
 		{
 			0 => null,
@@ -53,11 +57,11 @@ public class PlayerController : MonoBehaviour
 	{
 		if (movementVector.x > 0)
 		{
-			transform.localScale = Vector3.one * startScale;
+			m.mainTextureScale = new Vector2(1, 1);
 		}
 		if (movementVector.x < 0)
 		{
-			transform.localScale = new Vector3(-1, 1, 1) * startScale;
+			m.mainTextureScale = new Vector2(-1, 1);
 		}
 		r.velocity = new Vector3(movementVector.x, 0, movementVector.y);
 	}
@@ -78,6 +82,11 @@ public class PlayerController : MonoBehaviour
 			}
 		}
 		return bestTarget;
+	}
+
+	private void OnDrawGizmos()
+	{
+		Gizmos.DrawCube(transform.position, boxSize * 2);
 	}
 
 }

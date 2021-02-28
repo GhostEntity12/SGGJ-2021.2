@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using TMPro;
@@ -104,7 +105,7 @@ public class DialogueManager : MonoBehaviour
         fileLines = sceneFile.dialogue.Split(
             new[] { "\r\n", "\r", "\n", Environment.NewLine },
             StringSplitOptions.None
-            );
+            ).Where(l => l.Length > 0).ToArray();
         currentLineIndex = 0;
         LoadNewLine();
     }

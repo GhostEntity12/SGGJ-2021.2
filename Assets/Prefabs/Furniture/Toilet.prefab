@@ -13,7 +13,9 @@ GameObject:
   - component: {fileID: 8405870281881166498}
   - component: {fileID: 5664302055566221322}
   - component: {fileID: 4276163866257938075}
-  m_Layer: 0
+  - component: {fileID: 8736221986705367800}
+  - component: {fileID: 8736221986705367807}
+  m_Layer: 6
   m_Name: Toilet
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -27,7 +29,7 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 357005048169835093}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 11.065641, y: 13.394882, z: 1.7166615}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
@@ -313,3 +315,30 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 0}
+--- !u!65 &8736221986705367800
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 357005048169835093}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Size: {x: 1, y: 1.5, z: 0.7}
+  m_Center: {x: 0.5, y: 0.75, z: -0.35}
+--- !u!114 &8736221986705367807
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 357005048169835093}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e27ec80653c6f2f4db5fdbeaf005f5fb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  blocksInput: 1
+  examineScene: {fileID: 11400000, guid: e87e63e78c00c4649a4ea6b7f7a4d55c, type: 2}
