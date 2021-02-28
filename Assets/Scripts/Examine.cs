@@ -5,7 +5,7 @@ public class Examine : Interactable
 {
 	public Dialogue examineScene;
 
-	private void Reset()
+	protected override void Reset()
 	{
 		base.Reset();
 		blocksInput = true;

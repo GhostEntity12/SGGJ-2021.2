@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
@@ -9,20 +10,18 @@ public class PlayerController : MonoBehaviour
 	Rigidbody r;
 	public bool canInput = true;
 	Vector2 movementVector;
-	float startScale;
 
 	Vector3 boxSize = new Vector3(0.75f, 0.25f, 0.5f);
 
 	Interactable activeInteractable;
 
-	public CanvasGroup fade;
-
 	Material m;
+
+	public TextMeshProUGUI interactableText;
 
 	private void Awake()
 	{
 		r = GetComponent<Rigidbody>();
-		startScale = transform.localScale.y;
 		player = this;
 		m = GetComponent<Renderer>().sharedMaterial;
 	}
@@ -37,6 +36,15 @@ public class PlayerController : MonoBehaviour
 			_ => GetClosestInteractable(interactablesInRange),
 		};
 
+		if (activeInteractable is Warp)
+		{
+			interactableText.text = "E: Use";
+		}
+		if (activeInteractable is Examine)
+		{
+			interactableText.text = "E: Examine";
+		}
+
 		if (canInput)
 		{
 			movementVector = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
@@ -50,6 +58,12 @@ public class PlayerController : MonoBehaviour
 					activeInteractable.Interact();
 				}
 			}
+			interactableText.enabled = activeInteractable;
+		}
+		else
+		{
+			movementVector = Vector2.zero;
+			interactableText.enabled = false;
 		}
 	}
 
