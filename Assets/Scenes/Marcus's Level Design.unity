@@ -8120,7 +8120,7 @@ Mesh:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: pb_Mesh21562
+  m_Name: pb_Mesh-19636
   serializedVersion: 10
   m_SubMeshes:
   - serializedVersion: 2
@@ -31239,17 +31239,9 @@ MonoBehaviour:
   assetGuid: 
   m_Mesh: {fileID: 330315142}
   m_IsSelectable: 1
-  m_SelectedFaces: cf000000
-  m_SelectedEdges:
-  - a: 828
-    b: 829
-  - a: 830
-    b: 828
-  - a: 829
-    b: 831
-  - a: 831
-    b: 830
-  m_SelectedVertices: 3c0300003d0300003e0300003f030000
+  m_SelectedFaces: 
+  m_SelectedEdges: []
+  m_SelectedVertices: 
 --- !u!1 &620374539
 GameObject:
   m_ObjectHideFlags: 0
