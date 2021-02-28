@@ -12,6 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7d2dd5a14a49ebf40947dd20e8b02054, type: 3}
   m_Name: New Dialogue
   m_EditorClassIdentifier: 
-  dialogue: 'Spaceman: What''s this?.... Blood?
-
-'
+  dialogue: 'Spaceman: What''s this?.... Blood?'
